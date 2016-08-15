@@ -93,8 +93,8 @@ class Pogom(Flask):
             'config.html',
             gmaps_key=config.get('GOOGLEMAPS_KEY', None),
             accounts=config.get('ACCOUNTS', []),
-            password=config.get('CONFIG_PASSWORD', None),
-            sitepassword=config.get('SITE_PASSWORD', None))
+            config_password=config.get('CONFIG_PASSWORD', None),
+            site_password=config.get('SITE_PASSWORD', None))
 
     def post_config_site(self):
         if not self.is_authenticated():
@@ -139,8 +139,8 @@ class Pogom(Flask):
             'config.html',
             gmaps_key=config.get('GOOGLEMAPS_KEY', None),
             accounts=config.get('ACCOUNTS', []),
-            password=config.get('CONFIG_PASSWORD', None),
-            sitepassword=config.get('SITE_PASSWORD', None),
+            config_password=config.get('CONFIG_PASSWORD', None),
+            site_password=config.get('SITE_PASSWORD', None),
             alert=True))
         if pw_changed:
             resp.set_cookie('auth', config['AUTH_KEY'])
