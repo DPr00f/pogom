@@ -42,12 +42,22 @@ class Pogom(Flask):
         self.route('/locale', methods=['GET'])(self.locale)
 
     def is_authenticated(self):
+        if self.is_admin():
+            return True
+        if config.get('SITE_PASSWORD', None) and not request.cookies.get("siteauth") == config['SITE_AUTH_KEY']:
+            return False
+        return True
+
+    def is_admin(self):
         if config.get('CONFIG_PASSWORD', None) and not request.cookies.get("auth") == config['AUTH_KEY']:
             return False
         else:
             return True
 
     def fullmap(self):
+        if not self.is_authenticated():
+            return redirect(url_for('login'))
+
         # if 'search_thread' not in [t.name for t in threading.enumerate()]:
         if (not config.get('GOOGLEMAPS_KEY', None) or
                 not config.get('ACCOUNTS', None)):
@@ -56,10 +66,10 @@ class Pogom(Flask):
         return render_template('map.html',
                                scan_locations=json.dumps(self.scan_config.SCAN_LOCATIONS.values()),
                                gmaps_key=config['GOOGLEMAPS_KEY'],
-                               is_authenticated=self.is_authenticated())
+                               is_admin=self.is_admin())
 
     def login(self):
-        if self.is_authenticated():
+        if self.is_admin():
             return redirect(url_for('get_config_site'))
 
         if request.method == "GET":
@@ -68,12 +78,19 @@ class Pogom(Flask):
             resp = make_response(redirect(url_for('get_config_site')))
             resp.set_cookie('auth', config['AUTH_KEY'])
             return resp
+        if request.form.get('password', None) == config.get('SITE_PASSWORD', None):
+            resp = make_response(redirect(url_for('fullmap')))
+            resp.set_cookie('siteauth', config['SITE_AUTH_KEY'])
+            return resp;
+        return render_template('login.html')
 
     def heatmap_data(self):
+        if not self.is_authenticated():
+            return redirect(url_for('login'))
         return jsonify( Pokemon.get_heat_stats() )
 
     def get_config_site(self):
-        if not self.is_authenticated():
+        if not self.is_admin():
             return redirect(url_for('login'))
 
         return render_template(
@@ -85,7 +102,7 @@ class Pogom(Flask):
             password=config.get('CONFIG_PASSWORD', None))
 
     def post_config_site(self):
-        if not self.is_authenticated():
+        if not self.is_admin():
             return redirect(url_for('login'))
 
         config['LOCALE'] = request.form.get('locale', 'en')
@@ -96,6 +113,12 @@ class Pogom(Flask):
         if pw_changed:
             config['CONFIG_PASSWORD'] = pw
             config['AUTH_KEY'] = ''.join(random.choice(string.lowercase) for _ in range(32))
+
+        site_pw = request.form.get('sitePassword', None)
+        site_pw_changed = (site_pw != config.get('SITE_PASSWORD', None))
+        if site_pw_changed:
+            config['SITE_PASSWORD'] = site_pw
+            config['SITE_AUTH_KEY'] = ''.join(random.choice(string.lowercase) for _ in range(32))
 
         accounts_str = request.form.get('accounts', None)
 
@@ -124,15 +147,18 @@ class Pogom(Flask):
             locales_available=config.get('LOCALES_AVAILABLE', []),
             gmaps_key=config.get('GOOGLEMAPS_KEY', None),
             accounts=config.get('ACCOUNTS', []),
-            password=config.get('CONFIG_PASSWORD', None),
+            config_password=config.get('CONFIG_PASSWORD', None),
+            site_password=config.get('SITE_PASSWORD', None),
             alert=True))
         if pw_changed:
             resp.set_cookie('auth', config['AUTH_KEY'])
+        if site_pw_changed:
+            resp.set_cookie('siteauth', config['SITE_AUTH_KEY'])
 
         return resp
 
     def save_config(self):
-        if not self.is_authenticated():
+        if not self.is_admin():
             return redirect(url_for('login'))
 
         if (config['CONFIG_PATH'] is not None and
@@ -145,11 +171,14 @@ class Pogom(Flask):
             data = {'GOOGLEMAPS_KEY': config['GOOGLEMAPS_KEY'],
                     'LOCALE': config['LOCALE'],
                     'CONFIG_PASSWORD': config['CONFIG_PASSWORD'],
+                    'SITE_PASSWORD': config['SITE_PASSWORD'],
                     'SCAN_LOCATIONS': self.scan_config.SCAN_LOCATIONS.values(),
                     'ACCOUNTS': config['ACCOUNTS']}
             f.write(json.dumps(data))
 
     def map_data(self):
+        if not self.is_authenticated():
+            return redirect(url_for('login'))
         d = {}
 
         if not ScanMetrics.LAST_SUCCESSFUL_REQUEST:
@@ -181,11 +210,13 @@ class Pogom(Flask):
         return jsonify(d)
 
     def cover(self):
+        if not self.is_authenticated():
+            return redirect(url_for('login'))
         return jsonify({'cover': self.scan_config.COVER,
                         'scan_locations': self.scan_config.SCAN_LOCATIONS.values()})
 
     def add_location(self):
-        if not self.is_authenticated():
+        if not self.is_admin():
             return redirect(url_for('login'))
 
         lat = request.values.get('lat', type=float)
@@ -201,7 +232,7 @@ class Pogom(Flask):
         return ('', 204)
 
     def delete_location(self):
-        if not self.is_authenticated():
+        if not self.is_admin():
             return redirect(url_for('login'))
 
         lat = request.values.get('lat', type=float)
@@ -216,6 +247,8 @@ class Pogom(Flask):
         return ('', 204)
 
     def stats(self):
+        if not self.is_authenticated():
+            return redirect(url_for('login'))
         stats = Pokemon.get_stats()
         count = sum(p['count'] for p in stats)
         return render_template('stats.html', pokemons=Pokemon.get_stats(), total=count)
