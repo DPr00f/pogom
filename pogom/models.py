@@ -9,6 +9,9 @@ from peewee import Model, SqliteDatabase, InsertQuery, IntegerField, \
 from datetime import datetime
 from base64 import b64encode
 import threading
+import requests
+import calendar
+from . import config
 
 from .utils import get_pokemon_name, get_args
 from playhouse.db_url import connect
@@ -123,11 +126,13 @@ class Gym(BaseModel):
     longitude = FloatField()
     last_modified = DateTimeField()
 
-
+pokemonsfound = {}  # pokemon already found
 def parse_map(map_dict):
     pokemons = {}
     pokestops = {}
     gyms = {}
+
+    mobilealert = eval(config['PB_NOTIFY_MONS'])
 
     cells = map_dict['responses']['GET_MAP_OBJECTS']['map_cells']
     if sum(len(cell.keys()) for cell in cells) == len(cells) * 2:
@@ -155,6 +160,23 @@ def parse_map(map_dict):
         for p in cell.get('catchable_pokemons', []):
             if p['encounter_id'] in pokemons:
                 continue  # prevent unnecessary parsing
+
+            #pushbullet mobile
+            lat1 = str(p['latitude'])
+            lat2 = str(p['longitude'])
+            dtime = datetime.utcfromtimestamp((p['last_modified_timestamp_ms'] + p['time_till_hidden_ms']) / 1000.0)
+            unixtime = calendar.timegm(dtime.utctimetuple())
+            displaytime = datetime.fromtimestamp(unixtime).strftime('%H:%M:%S')
+            url1 = 'https://www.google.com/maps/place/' + lat1 + ',' + lat2 + '/@' + lat1 + ',' + lat2 + ',30z'
+            pbkey = config["PB_KEY"]
+            headers = {'Access-Token':str(pbkey)}
+            if pbkey is not None and p['pokemon_data']['pokemon_id'] in mobilealert and p['encounter_id'] not in pokemonsfound:
+                requests.post('https://api.pushbullet.com/v2/pushes', headers=headers, data = {'type':'link', 'title':get_pokemon_name(p['pokemon_data']['pokemon_id']) + " expires at " + str(displaytime), 'url':url1})
+
+            pokemonsfound[p['encounter_id']] = {
+                'encounter_id': b64encode(str(p['encounter_id'])),
+                'encounter_id2': p['encounter_id']
+            }
 
             log.critical("found catchable pokemon not in wild: {}".format(p))
 
