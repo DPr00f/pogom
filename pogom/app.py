@@ -99,6 +99,8 @@ class Pogom(Flask):
             locales_available=config.get('LOCALES_AVAILABLE', []),
             gmaps_key=config.get('GOOGLEMAPS_KEY', None),
             accounts=config.get('ACCOUNTS', []),
+            pbkey=config.get('PB_KEY', None),
+            pbPokeNotifyList=config.get('PB_NOTIFY_MONS', "[]"),
             password=config.get('CONFIG_PASSWORD', None))
 
     def post_config_site(self):
@@ -107,6 +109,8 @@ class Pogom(Flask):
 
         config['LOCALE'] = request.form.get('locale', 'en')
         config['GOOGLEMAPS_KEY'] = request.form.get('gmapsKey', '')
+        config['PB_KEY'] = request.form.get('pbkey', '')
+        config['PB_NOTIFY_MONS'] = request.form.get('pbPokeNotifyList', '')
 
         pw = request.form.get('configPassword', None)
         pw_changed = (pw != config.get('CONFIG_PASSWORD', None))
@@ -149,6 +153,8 @@ class Pogom(Flask):
             accounts=config.get('ACCOUNTS', []),
             config_password=config.get('CONFIG_PASSWORD', None),
             site_password=config.get('SITE_PASSWORD', None),
+            pbkey=config.get('PB_KEY', None),
+            pbPokeNotifyList=config.get('PB_NOTIFY_MONS', "[]"),
             alert=True))
         if pw_changed:
             resp.set_cookie('auth', config['AUTH_KEY'])
@@ -172,6 +178,8 @@ class Pogom(Flask):
                     'LOCALE': config['LOCALE'],
                     'CONFIG_PASSWORD': config['CONFIG_PASSWORD'],
                     'SITE_PASSWORD': config['SITE_PASSWORD'],
+                    'PB_KEY': config['PB_KEY'],
+                    'PB_NOTIFY_MONS': config['PB_NOTIFY_MONS'],
                     'SCAN_LOCATIONS': self.scan_config.SCAN_LOCATIONS.values(),
                     'ACCOUNTS': config['ACCOUNTS']}
             f.write(json.dumps(data))
