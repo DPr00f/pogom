@@ -35,6 +35,7 @@ def read_config(scan_config):
     config['GOOGLEMAPS_KEY'] = c.get('GOOGLEMAPS_KEY', None)
     config['CONFIG_PASSWORD'] = c.get('CONFIG_PASSWORD', None)
     config['SITE_PASSWORD'] = c.get('SITE_PASSWORD', None)
+    config['MOD_PASSWORD'] = c.get('MOD_PASSWORD', None)
     config['ACCOUNTS'] = c.get('ACCOUNTS', [])
     scan_config.update_scan_locations(c.get('SCAN_LOCATIONS', {}))
 
@@ -43,6 +44,9 @@ def read_config(scan_config):
 
     if config.get('SITE_PASSWORD', None):
         config['SITE_AUTH_KEY'] = ''.join(random.choice(string.lowercase) for _ in range(32))
+
+    if config.get('MOD_PASSWORD', None):
+        config['MOD_AUTH_KEY'] = ''.join(random.choice(string.lowercase) for _ in range(32))
 
 
 if __name__ == '__main__':
@@ -78,4 +82,5 @@ if __name__ == '__main__':
 
     app = Pogom(scan_config, __name__)
     config['ROOT_PATH'] = app.root_path
-    app.run(threaded=True, debug=args.debug, host=args.host, port=args.port)
+    context = ('domain.crt', 'domain.key')
+    app.run(threaded=True, ssl_context=context, debug=args.debug, host=args.host, port=args.port)

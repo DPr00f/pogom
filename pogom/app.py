@@ -42,7 +42,7 @@ class Pogom(Flask):
         self.route('/locale', methods=['GET'])(self.locale)
 
     def is_authenticated(self):
-        if self.is_admin():
+        if self.is_admin() or self.is_mod():
             return True
         if config.get('SITE_PASSWORD', None) and not request.cookies.get("siteauth") == config['SITE_AUTH_KEY']:
             return False
@@ -50,6 +50,14 @@ class Pogom(Flask):
 
     def is_admin(self):
         if config.get('CONFIG_PASSWORD', None) and not request.cookies.get("auth") == config['AUTH_KEY']:
+            return False
+        else:
+            return True
+
+    def is_mod(self):
+        if self.is_admin():
+            return True
+        if config.get('MOD_PASSWORD', None) and not request.cookies.get("modauth") == config['MOD_AUTH_KEY']:
             return False
         else:
             return True
@@ -66,7 +74,8 @@ class Pogom(Flask):
         return render_template('map.html',
                                scan_locations=json.dumps(self.scan_config.SCAN_LOCATIONS.values()),
                                gmaps_key=config['GOOGLEMAPS_KEY'],
-                               is_admin=self.is_admin())
+                               is_admin=self.is_admin(),
+                               is_mod=self.is_mod())
 
     def login(self):
         if self.is_admin():
@@ -81,6 +90,10 @@ class Pogom(Flask):
         if request.form.get('password', None) == config.get('SITE_PASSWORD', None):
             resp = make_response(redirect(url_for('fullmap')))
             resp.set_cookie('siteauth', config['SITE_AUTH_KEY'])
+            return resp;
+        if request.form.get('password', None) == config.get('MOD_PASSWORD', None):
+            resp = make_response(redirect(url_for('fullmap')))
+            resp.set_cookie('modauth', config['MOD_AUTH_KEY'])
             return resp;
         return render_template('login.html')
 
@@ -99,7 +112,9 @@ class Pogom(Flask):
             locales_available=config.get('LOCALES_AVAILABLE', []),
             gmaps_key=config.get('GOOGLEMAPS_KEY', None),
             accounts=config.get('ACCOUNTS', []),
-            password=config.get('CONFIG_PASSWORD', None))
+            config_password=config.get('CONFIG_PASSWORD', None),
+            site_password=config.get('SITE_PASSWORD', None),
+            mod_password=config.get('MOD_PASSWORD', None))
 
     def post_config_site(self):
         if not self.is_admin():
@@ -119,6 +134,12 @@ class Pogom(Flask):
         if site_pw_changed:
             config['SITE_PASSWORD'] = site_pw
             config['SITE_AUTH_KEY'] = ''.join(random.choice(string.lowercase) for _ in range(32))
+
+        mod_pw = request.form.get('modPassword', None)
+        mod_pw_changed = (mod_pw != config.get('MOD_PASSWORD', None))
+        if mod_pw_changed:
+            config['MOD_PASSWORD'] = mod_pw
+            config['MOD_AUTH_KEY'] = ''.join(random.choice(string.lowercase) for _ in range(32))
 
         accounts_str = request.form.get('accounts', None)
 
@@ -149,11 +170,14 @@ class Pogom(Flask):
             accounts=config.get('ACCOUNTS', []),
             config_password=config.get('CONFIG_PASSWORD', None),
             site_password=config.get('SITE_PASSWORD', None),
+            mod_password=config.get('MOD_PASSWORD', None),
             alert=True))
         if pw_changed:
             resp.set_cookie('auth', config['AUTH_KEY'])
         if site_pw_changed:
             resp.set_cookie('siteauth', config['SITE_AUTH_KEY'])
+        if mod_pw_changed:
+            resp.set_cookie('modauth', config['MOD_AUTH_KEY'])
 
         return resp
 
@@ -172,6 +196,7 @@ class Pogom(Flask):
                     'LOCALE': config['LOCALE'],
                     'CONFIG_PASSWORD': config['CONFIG_PASSWORD'],
                     'SITE_PASSWORD': config['SITE_PASSWORD'],
+                    'MOD_PASSWORD': config['MOD_PASSWORD'],
                     'SCAN_LOCATIONS': self.scan_config.SCAN_LOCATIONS.values(),
                     'ACCOUNTS': config['ACCOUNTS']}
             f.write(json.dumps(data))
@@ -216,7 +241,7 @@ class Pogom(Flask):
                         'scan_locations': self.scan_config.SCAN_LOCATIONS.values()})
 
     def add_location(self):
-        if not self.is_admin():
+        if not self.is_mod():
             return redirect(url_for('login'))
 
         lat = request.values.get('lat', type=float)
@@ -232,7 +257,7 @@ class Pogom(Flask):
         return ('', 204)
 
     def delete_location(self):
-        if not self.is_admin():
+        if not self.is_mod():
             return redirect(url_for('login'))
 
         lat = request.values.get('lat', type=float)

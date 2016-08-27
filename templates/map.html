@@ -201,7 +201,8 @@ span.select2 {
 				<h1>Settings</h1>
 				<p style="margin: 8px 0">
 					{% if is_admin %}
-					<span class="auth-status label label-success">Authenticated</span> {% else %}
+					<span class="auth-status label label-success">Authenticated</span> {% elif is_mod %}
+					<span class="auth-status label label-success">Moderator</span> {% else %}
 					<span class="auth-status label label-warning"><a href="login" style="color: white; text-decoration: inherit;">Not authenticated</a></span> {% endif %}
 					<span class="last-request label label-warning">No scans yet</span>
 				</p>
@@ -257,6 +258,10 @@ span.select2 {
 				<p>
 					<a href="config">Server Configuration</a>
 					<br />
+					{% if not is_mod %}
+					<a href="login">Moderator</a>
+					<br />
+					{% endif %}
 					<a href="stats">View Stats and Notifications</a>
 				</p>
 

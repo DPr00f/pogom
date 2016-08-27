@@ -10,6 +10,8 @@ var $selectExclude = $("#exclude-pokemon");
 var excludedPokemon = [];
 
 var map;
+var alreadyCentered;
+var userLoc;
 var scanLocations = new Map();
 var coverCircles = [];
 var newLocationMarker;
@@ -109,7 +111,7 @@ function drawHeatMap(index, item) {
         data: item.data,
         dissipating: true,
         map: null
-    })
+    });
 }
 
 
@@ -142,7 +144,7 @@ function updateHeatMap() {
         });
         $.each(heatMapData, function (i, item) {
             drawHeatMap(i, item);
-        })
+        });
 
     });
 }
@@ -163,6 +165,17 @@ function initMap() {
         mapTypeControl: false,
         streetViewControl: false,
         disableAutoPan: true
+    });
+
+    userLoc = new google.maps.Marker({
+        clickable: false,
+        icon: new google.maps.MarkerImage('//maps.gstatic.com/mapfiles/mobile/mobileimgs2.png',
+                                                        new google.maps.Size(22,22),
+                                                        new google.maps.Point(0,18),
+                                                        new google.maps.Point(11,11)),
+        shadow: null,
+        zIndex: 999,
+        map: map
     });
 
     updateScanLocations(initialScanLocations);
@@ -210,15 +223,22 @@ function initMap() {
             "json");
         });
     }
-
-    initGeoLocation();
+    setInterval(updateGeolocation, 3000);
+    updateGeolocation(true);
 };
 
-function initGeoLocation() {
+function updateGeolocation(center) {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function(position) {
-            map.setCenter({lat: position.coords.latitude, lng: position.coords.longitude});
+            if (center || !alreadyCentered) {
+                map.setCenter({lat: position.coords.latitude, lng: position.coords.longitude});
+                alreadyCentered = true;
+            }
+            var userPosition = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+            userLoc.setPosition(userPosition);
         });
+    } else {
+        alert("DAMMIT");
     }
 }
 
@@ -482,7 +502,7 @@ function updateMap() {
                 item.marker = setupPokemonMarker(item);
                 map_pokemons[item.encounter_id] = item;
                 notify(item);
-            } else if (item.encounter_id in map_pokemons  && 
+            } else if (item.encounter_id in map_pokemons  &&
                     map_pokemons[item.encounter_id].disappear_time != item.disappear_time) {
                 //update label
                 map_pokemons[item.encounter_id].disappear_time = item.disappear_time;
@@ -519,7 +539,7 @@ function updateMap() {
     }).fail(function() {
         $lastRequestLabel.removeClass('label-success label-warning');
         $lastRequestLabel.addClass('label-danger');
-        $lastRequestLabel.html("Disconnected from Server")
+        $lastRequestLabel.html("Disconnected from Server");
     });
 }
 
@@ -533,7 +553,7 @@ $('#gyms-checkbox').change(function() {
         $.each(map_gyms, function(key, value) {
             map_gyms[key].marker.setMap(null);
         });
-        map_gyms = {}
+        map_gyms = {};
     }
 });
 
@@ -545,7 +565,7 @@ $('#pokemon-checkbox').change(function() {
         $.each(map_pokemons, function(key, value) {
             map_pokemons[key].marker.setMap(null);
         });
-        map_pokemons = {}
+        map_pokemons = {};
     }
 });
 
