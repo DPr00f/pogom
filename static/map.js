@@ -223,26 +223,45 @@ function initMap() {
             "json");
         });
     }
-    setInterval(updateGeolocation, 5000);
-    updateGeolocation(true);
+    initialiseGeolocation();
 };
 
-function updateGeolocation(center) {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function onSuccess(position) {
-            if (center || !alreadyCentered) {
-                map.setCenter({lat: position.coords.latitude, lng: position.coords.longitude});
-                alreadyCentered = true;
-            }
-            var userPosition = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-            userLoc.setPosition(userPosition);
-        }, function onFailure(error) {
-            console.log("There was an error updating the geolocation");
-        }, {
-            maximumAge: Infinity,
-            timeout: 5000
-        });
+function locationError(err) {
+    if(!console || !console.error) {
+        return;
     }
+    console.error("The current location couldn't be determined", err);
+}
+
+function setCurrentPosition(position) {
+    map.panTo({lat: position.coords.latitude, lng: position.coords.longitude});
+    setMarkerPosition(position);
+}
+
+function setMarkerPosition(position) {
+    var userPosition = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+    userLoc.setPosition(userPosition);
+}
+
+function watchCurrentPosition(position) {
+    options = {
+        enableHighAccuracy: false,
+        timeout: 5000,
+        maximumAge: 0
+    };
+    navigator.geolocation.watchPosition(setMarkerPosition, locationError, options);
+}
+
+function displayAndWatch(position) {
+    setCurrentPosition(position);
+    watchCurrentPosition(position);
+}
+
+function initialiseGeolocation() {
+    if (!navigator.geolocation) {
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(displayAndWatch, locationError);
 }
 
 function pokemonLabel(name, id, disappear_time, latitude, longitude) {
