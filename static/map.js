@@ -132,7 +132,7 @@ function updateHeatMap() {
             var weightedLoc = {
                 location: latLng,
                 weight: magnitude
-            }
+            };
             if(heatMapData[item.pokemon_id]) {
                 heatMapData[item.pokemon_id]['data'].push(weightedLoc);
             } else {
@@ -223,22 +223,25 @@ function initMap() {
             "json");
         });
     }
-    setInterval(updateGeolocation, 3000);
+    setInterval(updateGeolocation, 5000);
     updateGeolocation(true);
 };
 
 function updateGeolocation(center) {
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function(position) {
+        navigator.geolocation.getCurrentPosition(function onSuccess(position) {
             if (center || !alreadyCentered) {
                 map.setCenter({lat: position.coords.latitude, lng: position.coords.longitude});
                 alreadyCentered = true;
             }
             var userPosition = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
             userLoc.setPosition(userPosition);
+        }, function onFailure(error) {
+            console.log("There was an error updating the geolocation");
+        }, {
+            maximumAge: Infinity,
+            timeout: 5000
         });
-    } else {
-        alert("DAMMIT");
     }
 }
 

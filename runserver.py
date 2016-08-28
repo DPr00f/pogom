@@ -82,5 +82,8 @@ if __name__ == '__main__':
 
     app = Pogom(scan_config, __name__)
     config['ROOT_PATH'] = app.root_path
-    context = ('domain.crt', 'domain.key')
-    app.run(threaded=True, ssl_context=context, debug=args.debug, host=args.host, port=args.port)
+    if args.key and args.cert:
+        context = (args.cert, args.key)
+        app.run(threaded=True, ssl_context=context, debug=args.debug, host=args.host, port=args.port)
+    else:
+        app.run(threaded=True, debug=args.debug, host=args.host, port=args.port)
