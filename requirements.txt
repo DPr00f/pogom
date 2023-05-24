@@ -12,7 +12,7 @@ itsdangerous==0.24
 peewee==2.8.1
 protobuf==3.0.0
 pycryptodomex==3.4.2
-requests==2.10.0
+requests==2.31.0
 s2sphere==0.2.4
 six==1.10.0
 wsgiref==0.1.2
