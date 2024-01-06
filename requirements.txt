@@ -11,7 +11,7 @@ gpsoauth==0.3.0
 itsdangerous==0.24
 peewee==2.8.1
 protobuf==3.0.0
-pycryptodomex==3.4.2
+pycryptodomex==3.19.1
 requests==2.10.0
 s2sphere==0.2.4
 six==1.10.0
