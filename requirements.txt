@@ -10,7 +10,7 @@ geopy==1.11.0
 gpsoauth==0.3.0
 itsdangerous==0.24
 peewee==2.8.1
-protobuf==3.0.0
+protobuf==6.33.5
 pycryptodomex==3.4.2
 requests==2.10.0
 s2sphere==0.2.4
